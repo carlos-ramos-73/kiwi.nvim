@@ -5,16 +5,22 @@ local wiki = require("kiwi.wiki")
 
 local M = {}
 
-M.todo = todo
-M.utils = utils
-M.VERSION = "0.4.0"
+-- Plug Mapping
+vim.keymap.set("n", "<Plug>(KiwiOpenWikis)", function() wiki.open_wiki_index() end)
+vim.keymap.set("n", "<Plug>(KiwiToggleTodo)", function() todo.toggle() end)
 
+-- User Commands
+vim.api.nvim_create_user_command("KiwiOpenWiki", function(args)
+    wiki.open_wiki_index(args.args)
+  end,
+  {
+    nargs = "?",
+    desc = "Open wiki index",
+  })
+
+-- Try to remove setup function below
 M.setup = function(opts)
   utils.setup(opts, config)
 end
-
-M.open_wiki_index = wiki.open_wiki_index
-M.create_or_open_wiki_file = wiki.create_or_open_wiki_file
-M.open_link = wiki.open_link
 
 return M

@@ -34,7 +34,6 @@ local resolve_path = function(path_str)
 	return expanded_path
 end
 
-
 -- Get the default Wiki folder path
 utils.get_wiki_path = function()
 	local default_dir = vim.fs.joinpath(vim.loop.os_homedir(), "wiki")

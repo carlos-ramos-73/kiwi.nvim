@@ -1,6 +1,7 @@
 local config = {
   path = "",
-  folders = nil
+  folders = nil,
+  template = "",
 }
 
 return config

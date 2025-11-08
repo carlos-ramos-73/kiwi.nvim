@@ -3,6 +3,23 @@ local utils = require("kiwi.utils")
 
 local M = {}
 
+local apply_template = function(buffer_number, title)
+  local template_path = config.template
+  if template_path == "" or template_path == nil then return end
+  template_path = vim.fn.expand(template_path)
+  local ok, template_lines = pcall(vim.fn.readfile, template_path)
+  if not ok then
+    vim.notify("Kiwi failed to load template: " .. template_path, vim.log.levels.ERROR)
+    return
+  end
+  local date = vim.fn.strftime("%Y-%m-%d")
+  for i, line in ipairs(template_lines) do
+    if line:find("%$DATE") then template_lines[i] = line:gsub("%$DATE", date) end
+    if line:find("%$TITLE") then template_lines[i] = line:gsub("%$TITLE", title) end
+  end
+  vim.api.nvim_buf_set_lines(buffer_number, 0, -1, false, template_lines)
+end
+
 local set_keymaps = function(buffer_number)
   local opts = { buffer = buffer_number, noremap = true, silent = true, nowait = true }
   vim.keymap.set("v", "<CR>", M.create_or_open_wiki_file, opts)
@@ -33,6 +50,7 @@ end
 
 -- Create a new Wiki entry in Journal folder on highlighting word and pressing <CR>
 M.create_or_open_wiki_file = function()
+  -- get selection
   local selection_start = vim.fn.getpos("v")
   local selection_end = vim.fn.getpos(".")
   if selection_start[2] == 0 or selection_end[2] == 0 then return end -- must be valid
@@ -46,7 +64,13 @@ M.create_or_open_wiki_file = function()
   if line == nil or line == '' then return end
   local newline = line:sub(0, selection_start[3] - 1) .. new_mkdn .. line:sub(selection_end[3] + 1, string.len(line))
   vim.api.nvim_set_current_line(newline)
+  -- create/load buffer & template
+  local buffer = vim.fs.joinpath(config.path, filename)
+  local use_template = false
+  if vim.fn.bufexists(buffer) == 0 then use_template = true end
   local buffer_number = vim.fn.bufnr(vim.fs.joinpath(config.path, filename), true)
+  if use_template then apply_template(buffer_number, name) end
+  -- set buffer and keymaps
   vim.api.nvim_win_set_buf(0, buffer_number)
   set_keymaps(buffer_number)
 end

@@ -11,6 +11,33 @@ utils.setup = function(opts, config)
 	utils.ensure_directories(config)
 end
 
+local choose_wiki = function(folders)
+  local path = ""
+  local template = ""
+  local list = {}
+  for i, props in pairs(folders) do
+    list[i] = props.name
+  end
+  vim.ui.select(list, {
+    prompt = 'Select wiki:',
+    format_item = function(item)
+      return item
+    end,
+  }, function(choice)
+    for _, props in pairs(folders) do
+      if props.name == choice then
+        if vim.uv.fs_realpath(props.path) then
+          path = props.path
+        else
+          path = vim.fs.joinpath(vim.loop.os_homedir(), props.path)
+        end
+        template = props.template
+      end
+    end
+  end)
+  return path, template
+end
+
 -- Resolves a path string from the config into a full, absolute path.
 -- @param path_str (string): The path from the configuration (e.g., "wiki" or "~/notes/wiki").
 -- @return (string): The resolved absolute path.
@@ -32,6 +59,30 @@ local resolve_path = function(path_str)
 		vim.notify("  " .. expanded_path .. " is created.", vim.log.levels.WARN)
 	end
 	return expanded_path
+end
+
+local substitute_path = function(filename, config)
+  local base_path = vim.fn.expand('%:p:h')
+
+  if filename:sub(1, 2) == "./" then
+    filename = vim.fs.joinpath(base_path, filename:sub(3, -1))
+  elseif filename:sub(1, 3) == "../" then
+    while filename:sub(1, 3) == "../" do
+      base_path = vim.fn.fnamemodify(base_path, ":h")
+      filename = filename:sub(4, -1)
+    end
+    if #base_path < #config.path then -- Check not to go out of this wiki
+      base_path = config.path
+    end
+    filename = vim.fs.joinpath(base_path, filename)
+  elseif filename:sub(1, 1) == "/" then
+    filename = vim.fs.joinpath(config.path, filename:sub(2, -1))
+    return filename -- Absolute path, no need to modify
+  else
+    filename = vim.fs.joinpath(base_path, filename)
+  end
+
+  return filename
 end
 
 -- Get the default Wiki folder path
@@ -91,41 +142,18 @@ utils._is_cursor_on_file = function(cursor, file, match_start, match_end)
   end
 end
 
-utils.choose_wiki = function(folders)
-  local path = ""
-  local list = {}
-  for i, props in pairs(folders) do
-    list[i] = props.name
-  end
-  vim.ui.select(list, {
-    prompt = 'Select wiki:',
-    format_item = function(item)
-      return item
-    end,
-  }, function(choice)
-    for _, props in pairs(folders) do
-      if props.name == choice then
-        if vim.uv.fs_realpath(props.path) then
-          path = props.path
-        else
-          path = vim.fs.joinpath(vim.loop.os_homedir(), props.path)
-        end
-      end
-    end
-  end)
-  return path
-end
-
 -- Show prompt if multiple wiki path found or else choose default path
 utils.prompt_folder = function(config)
   if config.folders ~= nil then
     local count = 0
     for _ in ipairs(config.folders) do count = count + 1 end
     if count > 1 then
-      config.path = utils.choose_wiki(config.folders)
+      config.path, config.template = choose_wiki(config.folders)
     else
       config.path = config.folders[1].path
+      config.template = config.folders[1].template
     end
+    if config.template == nil then config.template = "" end
   end
 end
 
@@ -139,30 +167,6 @@ utils.resolve_path = function(filename, config)
   end
 
   return substitute_path(filename, config)
-end
-
-function substitute_path(filename, config)
-  local base_path = vim.fn.expand('%:p:h')
-
-  if filename:sub(1, 2) == "./" then
-    filename = vim.fs.joinpath(base_path, filename:sub(3, -1))
-  elseif filename:sub(1, 3) == "../" then
-    while filename:sub(1, 3) == "../" do
-      base_path = vim.fn.fnamemodify(base_path, ":h")
-      filename = filename:sub(4, -1)
-    end
-    if #base_path < #config.path then -- Check not to go out of this wiki
-      base_path = config.path
-    end
-    filename = vim.fs.joinpath(base_path, filename)
-  elseif filename:sub(1, 1) == "/" then
-    filename = vim.fs.joinpath(config.path, filename:sub(2, -1))
-    return filename -- Absolute path, no need to modify
-  else
-    filename = vim.fs.joinpath(base_path, filename)
-  end
-
-  return filename
 end
 
 return utils

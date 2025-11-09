@@ -1,4 +1,5 @@
 local config = require("kiwi.config")
+local styling = require("kiwi.styling")
 local utils = require("kiwi.utils")
 
 local M = {}
@@ -20,11 +21,14 @@ local apply_template = function(buffer_number, title)
   vim.api.nvim_buf_set_lines(buffer_number, 0, -1, false, template_lines)
 end
 
-local set_keymaps = function(buffer_number)
+local new_wiki_buffer_setup = function(buffer_number)
+  -- Set Keymaps
   local opts = { buffer = buffer_number, noremap = true, silent = true, nowait = true }
   vim.keymap.set("v", "<CR>", M.create_or_open_wiki_file, opts)
   vim.keymap.set("n", "<CR>", M.open_link, opts)
   vim.keymap.set("n", "<Tab>", ":let @/=\"\\\\[.\\\\{-}\\\\]\"<CR>nl", opts)
+  -- Styling
+  styling.style_buffer(buffer_number)
 end
 
 -- Open wiki index file in the current tab
@@ -45,7 +49,7 @@ M.open_wiki_index = function(name)
   local wiki_index_path = vim.fs.joinpath(config.path, "index.md")
   local buffer_number = vim.fn.bufnr(wiki_index_path, true)
   vim.api.nvim_win_set_buf(0, buffer_number)
-  set_keymaps(buffer_number)
+  new_wiki_buffer_setup(buffer_number)
 end
 
 -- Create a new Wiki entry in Journal folder on highlighting word and pressing <CR>
@@ -70,9 +74,9 @@ M.create_or_open_wiki_file = function()
   if vim.fn.bufexists(buffer) == 0 then use_template = true end
   local buffer_number = vim.fn.bufnr(vim.fs.joinpath(config.path, filename), true)
   if use_template then apply_template(buffer_number, name) end
-  -- set buffer and keymaps
+  -- set buffer
   vim.api.nvim_win_set_buf(0, buffer_number)
-  set_keymaps(buffer_number)
+  new_wiki_buffer_setup(buffer_number)
 end
 
 -- Open a link under the cursor
@@ -85,7 +89,7 @@ M.open_link = function()
   local buffer_number = vim.fn.bufnr(filename, true)
   if buffer_number == -1 then return end
   vim.api.nvim_win_set_buf(0, buffer_number)
-  set_keymaps(buffer_number)
+  new_wiki_buffer_setup(buffer_number)
 end
 
 return M

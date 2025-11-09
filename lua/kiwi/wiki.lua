@@ -52,7 +52,7 @@ M.open_wiki_index = function(name)
   new_wiki_buffer_setup(buffer_number)
 end
 
--- Create a new Wiki entry in Journal folder on highlighting word and pressing <CR>
+-- Create a new entry in the wiki folder on highlighting word and pressing <CR>
 M.create_or_open_wiki_file = function()
   -- get selection
   local selection_start = vim.fn.getpos("v")
@@ -69,10 +69,11 @@ M.create_or_open_wiki_file = function()
   local newline = line:sub(0, selection_start[3] - 1) .. new_mkdn .. line:sub(selection_end[3] + 1, string.len(line))
   vim.api.nvim_set_current_line(newline)
   -- create/load buffer & template
-  local buffer = vim.fs.joinpath(config.path, filename)
+  local current_dir = vim.fn.expand('%:p:h')
+  local buffer = vim.fs.joinpath(current_dir, filename)
   local use_template = false
   if vim.fn.bufexists(buffer) == 0 then use_template = true end
-  local buffer_number = vim.fn.bufnr(vim.fs.joinpath(config.path, filename), true)
+  local buffer_number = vim.fn.bufnr(buffer, true)
   if use_template then apply_template(buffer_number, name) end
   -- set buffer
   vim.api.nvim_win_set_buf(0, buffer_number)

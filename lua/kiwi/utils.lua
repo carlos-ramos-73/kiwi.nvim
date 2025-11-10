@@ -1,5 +1,37 @@
 local utils = {}
 
+local choose_wiki = function(folders)
+  local path = ""
+  local template = ""
+  local list = {}
+  local user_quit = false
+  for i, props in pairs(folders) do
+    list[i] = props.name
+  end
+  vim.ui.select(list, {
+    prompt = 'Select wiki:',
+    format_item = function(item)
+      return item
+    end,
+  }, function(choice)
+    if choice == nil then
+      user_quit = true
+      return
+    end
+    for _, props in pairs(folders) do
+      if props.name == choice then
+        if vim.uv.fs_realpath(props.path) then
+          path = props.path
+        else
+          path = vim.fs.joinpath(vim.loop.os_homedir(), props.path)
+        end
+        template = props.template
+      end
+    end
+  end)
+  return path, template, user_quit
+end
+
 -- Is placed on a valid file
 local is_cursor_on_file = function(cursor, file, match_start, match_end)
   if cursor[2] >= match_start and cursor[2] <= match_end then
@@ -68,33 +100,6 @@ utils.setup = function(opts, config)
 	utils.ensure_directories(config)
 end
 
-local choose_wiki = function(folders)
-  local path = ""
-  local template = ""
-  local list = {}
-  for i, props in pairs(folders) do
-    list[i] = props.name
-  end
-  vim.ui.select(list, {
-    prompt = 'Select wiki:',
-    format_item = function(item)
-      return item
-    end,
-  }, function(choice)
-    for _, props in pairs(folders) do
-      if props.name == choice then
-        if vim.uv.fs_realpath(props.path) then
-          path = props.path
-        else
-          path = vim.fs.joinpath(vim.loop.os_homedir(), props.path)
-        end
-        template = props.template
-      end
-    end
-  end)
-  return path, template
-end
-
 -- Get the default Wiki folder path
 utils.get_wiki_path = function()
 	local default_dir = vim.fs.joinpath(vim.loop.os_homedir(), "wiki")
@@ -154,17 +159,20 @@ end
 
 -- Show prompt if multiple wiki path found or else choose default path
 utils.prompt_folder = function(config)
+  local did_user_quit = false
   if config.folders ~= nil then
     local count = 0
     for _ in ipairs(config.folders) do count = count + 1 end
     if count > 1 then
-      config.path, config.template = choose_wiki(config.folders)
+      config.path, config.template, did_user_quit = choose_wiki(config.folders)
+      if did_user_quit then return did_user_quit end
     else
       config.path = config.folders[1].path
       config.template = config.folders[1].template
     end
     if config.template == nil then config.template = "" end
   end
+  return did_user_quit
 end
 
 -- Resolves a path string from the config into a full, absolute path.

@@ -33,6 +33,7 @@ end
 
 -- Open wiki index file in the current tab
 M.open_wiki_index = function(name)
+  local did_user_quit = false
   if config.folders ~= nil then
     if name ~= nil then
       for _, v in pairs(config.folders) do
@@ -41,11 +42,12 @@ M.open_wiki_index = function(name)
         end
       end
     else
-      utils.prompt_folder(config)
+      did_user_quit = utils.prompt_folder(config)
     end
   else
     require("kiwi").setup()
   end
+  if did_user_quit then return end
   local wiki_index_path = vim.fs.joinpath(config.path, "index.md")
   local buffer_number = vim.fn.bufnr(wiki_index_path, true)
   vim.api.nvim_win_set_buf(0, buffer_number)

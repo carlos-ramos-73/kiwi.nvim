@@ -61,8 +61,20 @@ M.create_or_open_wiki_file = function()
   if selection_start[2] ~= selection_end[2] then return end -- must be same line number
   local name = vim.fn.getregion(selection_start, selection_end)[1]
   if name == nil or name == '' then return end
-  local filename = name:gsub(" ", "_"):gsub("\\", "") .. ".md"
-  local new_mkdn = "[" .. name .. "]" .. "(./" .. filename .. ")"
+  local filename
+  local new_mkdn
+
+  -- Testing if the visual highlighted selection is already in the correct Kiwi link format
+  local test_title, test_target = utils.get_kiwi_title_and_link(name)
+  if test_title ~= nil and test_target ~= nil then
+    name = test_title
+    filename = test_target
+    new_mkdn = "[" .. name .. "]" .. "(" .. filename .. ")"
+  else
+    filename = name:gsub(" ", "_"):gsub("\\", "") .. ".md"
+    new_mkdn = "[" .. name .. "]" .. "(./" .. filename .. ")"
+  end
+
   -- modify line
   local line = vim.fn.getline(".")
   if line == nil or line == '' then return end
@@ -84,7 +96,7 @@ end
 M.open_link = function()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line = vim.fn.getline(cursor[1])
-  local filename = utils.is_link(cursor, line)
+  local filename = utils.is_cursor_on_link(cursor, line)
   if filename == nil or filename:len() < 2 then return end
   filename = utils.resolve_path(filename, config)
   local buffer_number = vim.fn.bufnr(filename, true)

@@ -27,7 +27,7 @@ local style_links = function(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
   vim.api.nvim_set_hl(0, "KiwiLinK", { underline = true, sp = "#88c0d0"})
   vim.api.nvim_set_hl(0, "KiwiDeadLink", { strikethrough = true, fg = "#999999" })
-  local link_pattern = "%[([^%]]+)%]%(([^)]+)%)"
+  local link_pattern = "%[(.-)%]%(<?([^)>]+)>?%)"
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local current_dir = vim.fn.expand('%:p:h')
 

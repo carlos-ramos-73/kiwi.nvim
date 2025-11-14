@@ -1,3 +1,5 @@
+local utils = require("kiwi.utils")
+
 local M = {}
 
 local ns = vim.api.nvim_create_namespace("Kiwi")
@@ -29,7 +31,6 @@ local style_links = function(bufnr)
   vim.api.nvim_set_hl(0, "KiwiDeadLink", { strikethrough = true, fg = "#999999" })
   local link_pattern = "%[(.-)%]%(<?([^)>]+)>?%)"
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local current_dir = vim.fn.expand('%:p:h')
 
   for row, line in ipairs(lines) do
     local col = 1
@@ -43,12 +44,13 @@ local style_links = function(bufnr)
       local label_end = start_pos + #label -- Index of ']'
       local rest_end = end_pos           -- Index after ')'
 
-      -- Check dead link
-      local link_path = target
-      if target:sub(1, 1) ~= '/' then link_path = current_dir .. '/' .. target end
-      local link_hl_group = "KiwiLink"
-      if vim.fn.filereadable(link_path) == 0 then link_hl_group = "KiwiDeadLink" end
-
+      -- Check for dead link
+      local link_hl_group
+      if utils.is_dead_link(target) then
+        link_hl_group = "KiwiDeadLink"
+      else
+        link_hl_group = "KiwiLink"
+      end
 
       -- Apply highlight only to the label
       vim.api.nvim_buf_set_extmark(bufnr, ns, row - 1, label_start, {

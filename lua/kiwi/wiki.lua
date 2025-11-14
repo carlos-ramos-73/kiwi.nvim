@@ -96,13 +96,14 @@ end
 
 -- Open a link under the cursor
 M.open_link = function()
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local line = vim.fn.getline(cursor[1])
-  local filename = utils.is_cursor_on_link(cursor, line)
-  if filename == nil or filename:len() < 2 then return end
-  filename = utils.resolve_path(filename, config)
-  local buffer_number = vim.fn.bufnr(filename, true)
+  local title, target = utils.get_kiwi_under_cursor()
+  if title == nil or target == nil or target:len() < 2 then return end
+  target = utils.resolve_path(target, config)
+  local buffer_number = vim.fn.bufnr(target, true)
   if buffer_number == -1 then return end
+  if utils.is_dead_link(target) then
+    apply_template(buffer_number, title)
+  end
   vim.api.nvim_win_set_buf(0, buffer_number)
   new_wiki_buffer_setup(buffer_number)
 end

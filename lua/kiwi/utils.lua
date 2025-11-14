@@ -89,6 +89,14 @@ local substitute_path = function(filename, config)
   return filename
 end
 
+-- Check dead link
+utils.is_dead_link = function(link_path)
+  local current_dir = vim.fn.expand('%:p:h')
+  if link_path:sub(1, 1) ~= '/' then link_path = current_dir .. '/' .. link_path end
+  if vim.fn.filereadable(link_path) == 0 then return true end
+  return false
+end
+
 -- Setup wiki folder
 utils.setup = function(opts, config)
 	if opts and #opts > 0 then
@@ -118,39 +126,30 @@ utils.ensure_directories = function(config)
 end
 
 
--- Check if the cursor is on a link on the line
-utils.is_cursor_on_link = function(cursor, line)
+-- Gets the Kiwi link under the cursor if it exists
+-- @return title (string), target (string). Check both for nil, also title can be an empty string.
+utils.get_kiwi_under_cursor = function()
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local line = vim.fn.getline(cursor[1])
   cursor[2] = cursor[2] + 1 -- because vim counts from 0 but lua from 1
 
   -- Pattern for [title](file)
-  local pattern1 = "%[(.-)%]%(<?([^)>]+)>?%)"
+  local pattern = "%[(.-)%]%(<?([^)>]+)>?%)"
   local start_pos = 1
   while true do
-    local match_start, match_end, _, file = line:find(pattern1, start_pos)
+    local match_start, match_end, title, target = line:find(pattern, start_pos)
     if not match_start then break end
     start_pos = match_end + 1 -- Move past the current match
-    file = is_cursor_on_file(cursor, file, match_start, match_end)
-    if file then return file end
+    target = is_cursor_on_file(cursor, target, match_start, match_end)
+    if target then return title,target end
   end
-
-  -- Pattern for [[file]]
-  local pattern2 = "%[%[(.-)%]%]"
-  start_pos = 1
-  while true do
-    local match_start, match_end, file = line:find(pattern2, start_pos)
-    if not match_start then break end
-    start_pos = match_end + 1 -- Move past the current match
-    file = is_cursor_on_file(cursor, file, match_start, match_end)
-    if file then return "./" .. file end
-  end
-
-  return nil
+  return nil, nil
 end
 
 -- Returns the title and target of a Kiwi link
 -- i.e.: "[Example](./example.md)" -> "Example", "./example.md"
 -- @param str (string): The string to analyze.
--- @return title (string), target (string). Check both for nil, also label can be an empty string.
+-- @return title (string), target (string). Check both for nil, also title can be an empty string.
 utils.get_kiwi_title_and_link = function(str)
   local link_pattern = "%[(.-)%]%(<?([^)>]+)>?%)"
   local title, target = string.match(str, link_pattern)
